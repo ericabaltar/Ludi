@@ -1,7 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
+using System.Threading.Tasks;
+using DG.Tweening;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 
 public sealed class Board : MonoBehaviour
 {
@@ -14,7 +19,9 @@ public sealed class Board : MonoBehaviour
     public int Width => Tiles.GetLength(0);
     public int Height => Tiles.GetLength(1);
 
+    private readonly List<Tile> _selection = new List<Tile>();
 
+    private const float TweenDuration = 0.25f;
 
     private void Awake() => Instance = this;
 
@@ -39,6 +46,50 @@ public sealed class Board : MonoBehaviour
         }
 
 
+
+    }
+
+    public async void Select(Tile tile)
+    {
+        if (!_selection.Contains(tile)) _selection.Add(tile);
+
+        if (_selection.Count < 2) return;
+
+        Debug.Log(message:$"Selected tiles at ({_selection[0].x}, {_selection[0].y}) and ({_selection[1].x}, {_selection[1].y})");
+
+        await Swap(_selection[0], _selection[1]);
+
+        _selection.Clear();
+
+    }
+
+    public async Task Swap(Tile tile1, Tile tile2)
+    {
+        var icon1 = tile1.icon;
+        var icon2 = tile2.icon;
+
+        var icon1Transform = tile1.transform;
+        var icon2Transform = tile2.transform;
+
+        var sequence = DOTween.Sequence();
+
+        sequence.Join(icon1Transform.DOMove(icon2Transform.position, TweenDuration))
+                .Join(icon2Transform.DOMove(icon1Transform.position, TweenDuration));
+
+        await sequence.Play()
+                      .AsyncWaitForCompletion();
+
+
+        icon1Transform.SetParent(tile2.transform);
+        icon2Transform.SetParent(tile1.transform);
+
+        tile1.icon = icon2;
+        tile2.icon = icon1;
+
+        var tile1Item = tile1.Item;
+
+        tile1.Item = tile2.Item;
+        tile2.Item = tile1Item;
 
     }
 
